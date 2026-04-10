@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Login | FormFlow",
-  description: "Login to FormFlow",
+  title: "FormFlow",
+  description: "A DBMS Project",
 };
 
 export default function RootLayout({

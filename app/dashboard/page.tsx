@@ -1,38 +1,103 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/utils/supabase";
-import { getUserSession } from "@/utils/session";
 import { useRouter } from "next/navigation";
 
 const supabase = createClient();
 
+type FormRow = {
+    form_id: number;
+    title: string;
+    created_at: string;
+};
+
+type DashboardForm = FormRow & {
+    questionCount: number;
+    responseCount: number;
+};
+
+type StoredUser = {
+    user_id: number;
+    username: string;
+    name: string;
+};
+
 export default function DashboardPage() {
-    const [forms, setForms] = useState<any[]>([]);
-    const router = useRouter();
+    const [isLoading, setIsLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [forms, setForms] = useState<DashboardForm[]>([]);
+    const supabase = useMemo(() => createClient(), []);
 
     useEffect(() => {
-        async function loadForms() {
-            const session = getUserSession();
+        async function loadDashboardData() {
+            setIsLoading(true);
+            setErrorMessage(null);
 
-            if (!session) {
-                router.push("/login");
-                return;
-            }
+            try {
+                const stored = localStorage.getItem("formdb_user");
+                if (!stored) {
+                    setErrorMessage("No active user found. Please sign in again.");
+                    setForms([]);
+                    setIsLoading(false);
+                    return;
+                }
 
-            const { data, error } = await supabase
-                .from("forms")
-                .select("*")
-                .eq("user_id", session.user_id);
+                const user = JSON.parse(stored) as StoredUser;
 
-            if (!error && data) {
-                setForms(data);
+                const { data: createdForms, error: formsError } = await supabase
+                    .from("forms")
+                    .select("form_id, title, created_at")
+                    .eq("creator_id", user.user_id)
+                    .order("created_at", { ascending: false });
+
+                if (formsError) {
+                    setErrorMessage(formsError.message || "Failed to load forms.");
+                    setForms([]);
+                    setIsLoading(false);
+                    return;
+                }
+
+                const formsData = (createdForms ?? []) as FormRow[];
+
+                const formsWithCounts = await Promise.all(
+                    formsData.map(async (form) => {
+                        const [{ count: questionCount }, { count: responseCount }] = await Promise.all([
+                            supabase
+                                .from("questions")
+                                .select("*", { count: "exact", head: true })
+                                .eq("form_id", form.form_id),
+                            supabase
+                                .from("responses")
+                                .select("*", { count: "exact", head: true })
+                                .eq("form_id", form.form_id),
+                        ]);
+
+                        return {
+                            ...form,
+                            questionCount: questionCount ?? 0,
+                            responseCount: responseCount ?? 0,
+                        };
+                    })
+                );
+
+                setForms(formsWithCounts);
+            } catch {
+                setErrorMessage("Unexpected error while loading dashboard.");
+                setForms([]);
+            } finally {
+                setIsLoading(false);
             }
         }
 
-        loadForms();
-    }, []);
-  return (
+        loadDashboardData();
+    }, [supabase]);
+
+    const totalSubmissions = useMemo(() => {
+        return forms.reduce((acc, form) => acc + form.responseCount, 0);
+    }, [forms]);
+
+    return (
         <>
             {/* Welcome Header */}
             <section className="mb-12">
@@ -55,7 +120,7 @@ export default function DashboardPage() {
                         </span>
                         <h2 className="text-2xl font-bold mb-4">Enter Form Code</h2>
                         <p className="text-on-surface-variant mb-8">
-                            Access form by entering its unique identification string below.
+                            Access a form by entering its unique identification string below.
                         </p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4">
@@ -77,7 +142,7 @@ export default function DashboardPage() {
                 <div className="primary-gradient text-on-primary p-8 rounded-2xl relative overflow-hidden group shadow-[0_24px_48px_-16px_rgba(63,81,255,0.45)]">
                     <div className="relative z-10 h-full flex flex-col justify-between">
                         <div className="text-7xl font-black opacity-60 group-hover:opacity-30 transition-opacity">
-                            24
+                            {totalSubmissions}
                         </div>
                         <div>
                             <h3 className="text-xl font-bold mb-1">Total Submissions</h3>
@@ -101,49 +166,41 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {/* Form Card 1 */}
-                    <div className="group bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/15 hover:border-primary/30 hover:shadow-[0_24px_48px_-12px_rgba(26,27,34,0.08)] transition-all cursor-pointer">
-                        {/* <div className="flex justify-between items-start mb-6">
-                            <div className="p-3 bg-primary/10 rounded-lg text-primary">
-                                <span className="material-symbols-outlined">architecture</span>
-                            </div>
-                            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">
-                                Updated 2h ago
-                            </span>
-                        </div> */}
-                        <h3 className="text-lg font-bold mb-1 group-hover:text-primary transition-colors">
-                            DBMS Feedback Form
-                        </h3>
-                        <p className="text-sm text-on-surface-variant mb-6">
-                            College project evaluation data collection.
-                        </p>
-                        <div className="flex items-center justify-between text-xs font-bold text-outline uppercase tracking-widest">
-                            <span>12 Questions</span>
-                            <span>48 Responses</span>
+                    {isLoading && (
+                        <div className="md:col-span-2 xl:col-span-3 bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/15 text-on-surface-variant">
+                            Loading your forms...
                         </div>
-                    </div>
+                    )}
 
-                    {/* Form Card 2 */}
-                    <div className="group bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/15 hover:border-primary/30 hover:shadow-[0_24px_48px_-12px_rgba(26,27,34,0.08)] transition-all cursor-pointer">
-                        {/* <div className="flex justify-between items-start mb-6">
-                            <div className="p-3 bg-secondary/10 rounded-lg text-secondary">
-                                <span className="material-symbols-outlined">landscape</span>
-                            </div>
-                            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">
-                                Updated 1d ago
-                            </span>
-                        </div> */}
-                        <h3 className="text-lg font-bold mb-1 group-hover:text-primary transition-colors">
-                            Class Survey
-                        </h3>
-                        <p className="text-sm text-on-surface-variant mb-6">
-                            General questions for the student base.
-                        </p>
-                        <div className="flex items-center justify-between text-xs font-bold text-outline uppercase tracking-widest">
-                            <span>5 Questions</span>
-                            <span>156 Responses</span>
+                    {!isLoading && errorMessage && (
+                        <div className="md:col-span-2 xl:col-span-3 bg-error-container text-on-error-container p-6 rounded-2xl border border-error/20">
+                            {errorMessage}
                         </div>
-                    </div>
+                    )}
+
+                    {!isLoading && !errorMessage && forms.length === 0 && (
+                        <div className="md:col-span-2 xl:col-span-3 bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/15 text-on-surface-variant">
+                            You have not created any forms yet.
+                        </div>
+                    )}
+
+                    {!isLoading && !errorMessage && forms.map((form) => (
+                        <div
+                            key={form.form_id}
+                            className="group bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/15 hover:border-primary/30 hover:shadow-[0_24px_48px_-12px_rgba(26,27,34,0.08)] transition-all cursor-pointer"
+                        >
+                            <h3 className="text-lg font-bold mb-1 group-hover:text-primary transition-colors">
+                                {form.title}
+                            </h3>
+                            <p className="text-sm text-on-surface-variant mb-6">
+                                Created on {new Date(form.created_at).toLocaleDateString()}
+                            </p>
+                            <div className="flex items-center justify-between text-xs font-bold text-outline uppercase tracking-widest">
+                                <span>{form.questionCount} Questions</span>
+                                <span>{form.responseCount} Responses</span>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </section>
             <footer className="border-t border-outline-variant/20 mt-auto py-8 text-center text-on-surface-variant text-sm z-10 bg-surface-container-lowest/50 backdrop-blur-sm">

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase";
 
 export default function LoginForm() {
@@ -10,6 +11,7 @@ export default function LoginForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const router = useRouter();
+    const searchParams = useSearchParams();
     const supabase = createClient();
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -52,8 +54,12 @@ export default function LoginForm() {
                 name: user.name
             }));
 
-            // Redirect to dashboard
-            router.push("/dashboard");
+            // Write a cookie so Next.js proxy can protect server-routed pages.
+            document.cookie = "formdb_session=active; Path=/; Max-Age=604800; SameSite=Lax";
+
+            // Redirect back to intended page, fallback to dashboard.
+            const nextPath = searchParams.get("next") || "/dashboard";
+            router.push(nextPath);
 
         } catch (err) {
             console.error("Login Error:", err);

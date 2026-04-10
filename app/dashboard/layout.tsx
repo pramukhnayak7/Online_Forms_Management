@@ -1,5 +1,6 @@
 import Link from "next/link";
-import UserAvatar from "@/components/UserAvatar";
+import SignOutButton from "./SignOutButton";
+import UserInitialAvatar from "./UserInitialAvatar";
 
 export default function DashboardLayout({
     children,
@@ -32,9 +33,9 @@ export default function DashboardLayout({
                         <button className="p-2 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-full active:scale-95 duration-200">
                             <span className="material-symbols-outlined">notifications</span>
                         </button>*/}
-                       
+                        <UserInitialAvatar />
                     </div>
-                     <UserAvatar />
+
                 </div>
             </header>
 
@@ -60,12 +61,9 @@ export default function DashboardLayout({
                         </button>
                     </div>
 
-                    {/* <div className="mt-auto pb-4 space-y-1">
-                        <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-primary hover:translate-x-1 transition-all">
-                            <span className="material-symbols-outlined">settings</span>
-                            <span>Settings</span>
-                        </Link>
-                    </div> */}
+                    <div className="mt-auto pb-4 space-y-1">
+                        <SignOutButton />
+                    </div>
                 </aside>
 
                 {/* Main Canvas where page.tsx renders */}
