@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/utils/supabase";
+import { getUserSession } from "@/utils/session";
+import { useRouter } from "next/navigation";
+
+const supabase = createClient();
 
 type FormRow = {
     form_id: number;
