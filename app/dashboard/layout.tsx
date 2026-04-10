@@ -1,6 +1,8 @@
 import Link from "next/link";
 import SignOutButton from "./SignOutButton";
 import UserInitialAvatar from "./UserInitialAvatar";
+import CreateFormButton from "./CreateFormButton";
+
 
 export default function DashboardLayout({
     children,
@@ -54,13 +56,15 @@ export default function DashboardLayout({
                         </Link>
                     </nav>
 
-                    <div className="mt-6 px-2">
+                    {/* <div className="mt-6 px-2">
                         <button className="w-full py-3 primary-gradient text-on-primary rounded-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-95 transition-all">
                             <span className="material-symbols-outlined text-sm">add</span>
                             <span>Create New Form</span>
                         </button>
+                    </div> */}
+                    <div className="mt-6 px-2">
+                        <CreateFormButton />
                     </div>
-
                     <div className="mt-auto pb-4 space-y-1">
                         <SignOutButton />
                     </div>
