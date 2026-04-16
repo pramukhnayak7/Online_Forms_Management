@@ -8,6 +8,7 @@ export default function SignOutButton() {
     function handleSignOut() {
         localStorage.removeItem("formdb_user");
         document.cookie = "formdb_session=; Path=/; Max-Age=0; SameSite=Lax";
+        document.cookie = "formdb_user_id=; Path=/; Max-Age=0; SameSite=Lax";
         router.push("/login");
         router.refresh();
     }

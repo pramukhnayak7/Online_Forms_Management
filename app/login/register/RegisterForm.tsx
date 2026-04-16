@@ -59,7 +59,13 @@ export default function RegisterForm() {
 
             // Success
             if (newUser) {
-                document.cookie = `formdb_user_id=${newUser.user_id}; path=/; max-age=86400`;
+                document.cookie = "formdb_session=active; Path=/; Max-Age=604800; SameSite=Lax";
+                document.cookie = `formdb_user_id=${newUser.user_id}; Path=/; Max-Age=604800; SameSite=Lax`;
+                localStorage.setItem('formdb_user', JSON.stringify({
+                    user_id: newUser.user_id,
+                    username: newUser.username,
+                    name: newUser.name
+                }));
 
                 // Redirect to dashboard
                 router.push("/dashboard");
@@ -116,6 +122,7 @@ export default function RegisterForm() {
                                 type="text"
                                 placeholder="John Doe"
                                 autoComplete="given-name"
+                                suppressHydrationWarning
                                 className="w-full pl-11 pr-4 py-3.5 bg-surface-container-high border-0 border-b-2 border-transparent focus:border-primary focus:ring-0 rounded-t-lg transition-all text-on-surface placeholder:text-outline/60"
                                 required
                             />
@@ -140,6 +147,7 @@ export default function RegisterForm() {
                                 type="text"
                                 placeholder="johndoe12"
                                 autoComplete="username"
+                                suppressHydrationWarning
                                 className="w-full pl-11 pr-4 py-3.5 bg-surface-container-high border-0 border-b-2 border-transparent focus:border-primary focus:ring-0 rounded-t-lg transition-all text-on-surface placeholder:text-outline/60"
                                 required
                             />
@@ -164,6 +172,7 @@ export default function RegisterForm() {
                                 type="email"
                                 placeholder="name@company.com"
                                 autoComplete="email"
+                                suppressHydrationWarning
                                 className="w-full pl-11 pr-4 py-3.5 bg-surface-container-high border-0 border-b-2 border-transparent focus:border-primary focus:ring-0 rounded-t-lg transition-all text-on-surface placeholder:text-outline/60"
                                 required
                             />
@@ -188,6 +197,7 @@ export default function RegisterForm() {
                                 type={showPassword ? "text" : "password"}
                                 placeholder="••••••••"
                                 autoComplete="new-password"
+                                suppressHydrationWarning
                                 className="w-full pl-11 pr-12 py-3.5 bg-surface-container-high border-0 border-b-2 border-transparent focus:border-primary focus:ring-0 rounded-t-lg transition-all text-on-surface placeholder:text-outline/60"
                                 required
                             />
@@ -221,6 +231,7 @@ export default function RegisterForm() {
                                 type={showPassword ? "text" : "password"}
                                 placeholder="••••••••"
                                 autoComplete="new-password"
+                                suppressHydrationWarning
                                 className="w-full pl-11 pr-12 py-3.5 bg-surface-container-high border-0 border-b-2 border-transparent focus:border-primary focus:ring-0 rounded-t-lg transition-all text-on-surface placeholder:text-outline/60"
                                 required
                             />

@@ -56,6 +56,8 @@ export default function LoginForm() {
 
             // Write a cookie so Next.js proxy can protect server-routed pages.
             document.cookie = "formdb_session=active; Path=/; Max-Age=604800; SameSite=Lax";
+            // Keep cookie-based user id in sync with CreateForm flow.
+            document.cookie = `formdb_user_id=${user.user_id}; Path=/; Max-Age=604800; SameSite=Lax`;
 
             // Redirect back to intended page, fallback to dashboard.
             const nextPath = searchParams.get("next") || "/dashboard";
@@ -113,6 +115,7 @@ export default function LoginForm() {
                                 type="text"
                                 placeholder="name@company.com"
                                 autoComplete="email"
+                                suppressHydrationWarning
                                 className="w-full pl-11 pr-4 py-3.5 bg-surface-container-high border-0 border-b-2 border-transparent focus:border-primary focus:ring-0 rounded-t-lg transition-all text-on-surface placeholder:text-outline/60"
                             />
                         </div>
@@ -144,6 +147,7 @@ export default function LoginForm() {
                                 type={showPassword ? "text" : "password"}
                                 placeholder="••••••••"
                                 autoComplete="current-password"
+                                suppressHydrationWarning
                                 className="w-full pl-11 pr-12 py-3.5 bg-surface-container-high border-0 border-b-2 border-transparent focus:border-primary focus:ring-0 rounded-t-lg transition-all text-on-surface placeholder:text-outline/60"
                             />
                             <button

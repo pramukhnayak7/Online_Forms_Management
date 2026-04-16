@@ -33,12 +33,30 @@ export default function CreateFormModal({ isOpen, onClose }: CreateFormModalProp
         return null;
     };
 
+    const getUserId = () => {
+        const cookieUserId = getUserIdFromCookie();
+        if (cookieUserId) return cookieUserId;
+
+        const stored = localStorage.getItem("formdb_user");
+        if (!stored) return null;
+
+        try {
+            const parsed = JSON.parse(stored) as { user_id?: number };
+            if (typeof parsed.user_id === "number") {
+                return String(parsed.user_id);
+            }
+            return null;
+        } catch {
+            return null;
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
 
-        const userId = getUserIdFromCookie();
+        const userId = getUserId();
 
         if (!userId) {
             setError("Authentication error. Please log in again.");
