@@ -27,6 +27,8 @@ export default function DashboardPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [forms, setForms] = useState<DashboardForm[]>([]);
+    const [accessCode, setAccessCode] = useState("");
+    const router = useRouter();
     const supabase = useMemo(() => createClient(), []);
 
     useEffect(() => {
@@ -126,12 +128,30 @@ export default function DashboardPage() {
                     <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex-1 relative">
                             <input
+                                value={accessCode}
+                                onChange={(event) => setAccessCode(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key === "Enter") {
+                                        event.preventDefault();
+                                        const normalizedValue = accessCode.trim().toUpperCase();
+                                        if (normalizedValue) router.push(`/forms/${normalizedValue}`);
+                                    }
+                                }}
+                                maxLength={6}
                                 className="w-full bg-surface-container-high border-b-2 border-primary border-t-0 border-l-0 border-r-0 rounded-t-lg px-6 py-4 outline-none focus:ring-0 transition-all text-xl font-mono tracking-widest placeholder:opacity-30"
                                 placeholder="XXXXX"
                                 type="text"
                             />
                         </div>
-                        <button className="px-8 py-4 primary-gradient text-on-primary font-bold rounded-lg shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const normalizedValue = accessCode.trim().toUpperCase();
+                                if (normalizedValue) router.push(`/forms/${normalizedValue}`);
+                            }}
+                            disabled={!accessCode.trim()}
+                            className="px-8 py-4 primary-gradient text-on-primary font-bold rounded-lg shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                             <span>Start Form</span>
                             <span className="material-symbols-outlined">arrow_forward</span>
                         </button>
