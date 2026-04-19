@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase";
 import { useRouter } from "next/navigation";
 
-const supabase = createClient();
-
 type FormRow = {
-    form_id: number;
+    form_id: string;
     title: string;
     created_at: string;
 };
@@ -28,8 +26,10 @@ export default function DashboardPage() {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [forms, setForms] = useState<DashboardForm[]>([]);
     const [accessCode, setAccessCode] = useState("");
+    const [openMenuFormId, setOpenMenuFormId] = useState<string | null>(null);
     const router = useRouter();
     const supabase = useMemo(() => createClient(), []);
+    const openMenuRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         async function loadDashboardData() {
@@ -95,9 +95,60 @@ export default function DashboardPage() {
         loadDashboardData();
     }, [supabase]);
 
+    useEffect(() => {
+        if (!openMenuFormId) {
+            return;
+        }
+
+        const handlePointerDown = (event: PointerEvent) => {
+            const menuElement = openMenuRef.current;
+
+            if (menuElement && !menuElement.contains(event.target as Node)) {
+                setOpenMenuFormId(null);
+            }
+        };
+
+        document.addEventListener("pointerdown", handlePointerDown);
+
+        return () => {
+            document.removeEventListener("pointerdown", handlePointerDown);
+        };
+    }, [openMenuFormId]);
+
     const totalSubmissions = useMemo(() => {
         return forms.reduce((acc, form) => acc + form.responseCount, 0);
     }, [forms]);
+
+    const handleEditForm = (formId: string) => {
+        setOpenMenuFormId(null);
+        router.push(`/dashboard/forms/${formId}/edit`);
+    };
+
+    const handleViewResponses = (formId: string) => {
+        setOpenMenuFormId(null);
+        router.push(`/dashboard/forms/${formId}/responses`);
+    };
+
+    const handleDeleteForm = async (formId: string) => {
+        setOpenMenuFormId(null);
+
+        const shouldDelete = window.confirm(
+            "Delete this form? This will also remove its questions and responses."
+        );
+
+        if (!shouldDelete) {
+            return;
+        }
+
+        const { error } = await supabase.from("forms").delete().eq("form_id", formId);
+
+        if (error) {
+            setErrorMessage(error.message || "Failed to delete the form.");
+            return;
+        }
+
+        setForms((currentForms) => currentForms.filter((form) => form.form_id !== formId));
+    };
 
     return (
         <>
@@ -207,8 +258,55 @@ export default function DashboardPage() {
                     {!isLoading && !errorMessage && forms.map((form) => (
                         <div
                             key={form.form_id}
-                            className="group bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/15 hover:border-primary/30 hover:shadow-[0_24px_48px_-12px_rgba(26,27,34,0.08)] transition-all cursor-pointer"
+                            className={`group relative bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/15 hover:border-primary/30 hover:shadow-[0_24px_48px_-12px_rgba(26,27,34,0.08)] transition-all ${openMenuFormId === form.form_id ? "z-30" : "z-0"}`}
                         >
+                            <div
+                                ref={openMenuFormId === form.form_id ? openMenuRef : undefined}
+                                className="absolute right-3 top-3 z-40"
+                            >
+                                <button
+                                    type="button"
+                                    aria-label={`Open actions for ${form.title}`}
+                                    onClick={() =>
+                                        setOpenMenuFormId((current) =>
+                                            current === form.form_id ? null : form.form_id
+                                        )
+                                    }
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">more_vert</span>
+                                </button>
+
+                                {openMenuFormId === form.form_id && (
+                                    <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-lowest shadow-[0_20px_40px_-16px_rgba(26,27,34,0.22)] z-50">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleEditForm(form.form_id)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                                            Edit
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleViewResponses(form.form_id)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">quick_reference_all</span>
+                                            View Responses
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteForm(form.form_id)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-error transition-colors hover:bg-error-container/70"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                                            Delete
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
                             <h3 className="text-lg font-bold mb-1 group-hover:text-primary transition-colors">
                                 {form.title}
                             </h3>

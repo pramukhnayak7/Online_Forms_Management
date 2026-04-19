@@ -41,6 +41,24 @@ export default function FormAnswerPage() {
     return code ? code.trim().toUpperCase() : "";
   }, [pathname]);
 
+  const requiredQuestionCount = useMemo(
+    () => questions.filter((question) => question.is_required).length,
+    [questions]
+  );
+
+  const answeredQuestionCount = useMemo(
+    () => Object.values(answers).filter((value) => value.trim().length > 0).length,
+    [answers]
+  );
+
+  const completionPercent = useMemo(() => {
+    if (questions.length === 0) {
+      return 0;
+    }
+
+    return Math.round((answeredQuestionCount / questions.length) * 100);
+  }, [answeredQuestionCount, questions.length]);
+
   useEffect(() => {
     async function loadForm() {
       setIsLoading(true);
@@ -198,8 +216,8 @@ export default function FormAnswerPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen py-16 px-6 bg-surface text-on-surface">
-        <div className="max-w-4xl mx-auto text-center">
+      <main className="min-h-screen bg-surface px-6 py-16 text-on-surface">
+        <div className="mx-auto flex max-w-4xl items-center justify-center text-center">
           <p className="text-lg text-on-surface-variant">Loading form...</p>
         </div>
       </main>
@@ -208,14 +226,14 @@ export default function FormAnswerPage() {
 
   if (errorMessage && !form) {
     return (
-      <main className="min-h-screen py-16 px-6 bg-surface text-on-surface">
-        <div className="max-w-4xl mx-auto rounded-3xl bg-surface-container-lowest border border-outline-variant/20 p-10 text-center">
+      <main className="min-h-screen bg-surface px-6 py-16 text-on-surface">
+        <div className="mx-auto max-w-4xl rounded-3xl border border-outline-variant/20 bg-surface-container-lowest p-10 text-center">
           <p className="text-xl font-semibold mb-4">Unable to open this form</p>
           <p className="text-on-surface-variant mb-8">{errorMessage}</p>
           <button
             type="button"
             onClick={() => router.push("/dashboard")}
-            className="px-6 py-3 primary-gradient text-on-primary rounded-full font-semibold"
+            className="inline-flex items-center justify-center rounded-full px-6 py-3 font-semibold primary-gradient text-on-primary"
           >
             Back to dashboard
           </button>
@@ -225,16 +243,16 @@ export default function FormAnswerPage() {
   }
 
   return (
-    <main className="min-h-screen py-16 px-6 bg-surface text-on-surface">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="rounded-3xl bg-surface-container-lowest border border-outline-variant/15 p-10 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
-            <div>
+    <main className="min-h-screen bg-surface px-6 py-16 text-on-surface">
+      <div className="mx-auto flex max-w-4xl flex-col gap-8">
+        <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-10 shadow-sm">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary/80 mb-2">Form Code</p>
               <h1 className="text-4xl font-extrabold tracking-tight">{form?.title}</h1>
               {form?.description && <p className="mt-4 text-on-surface-variant">{form.description}</p>}
             </div>
-            <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-semibold text-on-surface-variant">
+            <div className="shrink-0 self-start rounded-2xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-semibold text-on-surface-variant sm:self-auto">
               {normalizedCode}
             </div>
           </div>
@@ -265,53 +283,58 @@ export default function FormAnswerPage() {
               No questions have been added to this form yet.
             </div>
           ) : (
-            questions.map((question) => {
-              const value = answers[question.question_id] ?? "";
-              return (
-                <div key={question.question_id} className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-6">
-                  <div className="flex items-center justify-between gap-4 mb-4">
-                    <div>
-                      <p className="text-base font-semibold">{question.question_text}</p>
-                      {question.is_required && <p className="text-xs text-on-surface-variant">Required</p>}
+            <div className="space-y-6">
+              {questions.map((question) => {
+                const value = answers[question.question_id] ?? "";
+                return (
+                  <div key={question.question_id} className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-6">
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="text-base font-semibold">{question.question_text}</p>
+                        {question.is_required && <p className="text-xs text-on-surface-variant">Required</p>}
+                      </div>
+                      <span className="self-start text-xs uppercase tracking-[0.2em] text-on-surface-variant sm:shrink-0">{question.question_type === "long_text" ? "Paragraph" : "Answer"}</span>
                     </div>
-                    <span className="text-xs uppercase tracking-[0.2em] text-on-surface-variant">{question.question_type === "long_text" ? "Paragraph" : "Answer"}</span>
+                    {question.question_type === "long_text" ? (
+                      <textarea
+                        value={value}
+                        onChange={(event) => handleAnswerChange(question.question_id, event.target.value)}
+                        rows={4}
+                        className="w-full rounded-3xl border border-outline-variant/15 bg-surface-container-high px-4 py-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        placeholder="Type your answer here"
+                        disabled={alreadySubmitted}
+                      />
+                    ) : (
+                      <input
+                        value={value}
+                        onChange={(event) => handleAnswerChange(question.question_id, event.target.value)}
+                        className="w-full rounded-3xl border border-outline-variant/15 bg-surface-container-high px-4 py-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        placeholder="Type your answer here"
+                        disabled={alreadySubmitted}
+                      />
+                    )}
                   </div>
-                  {question.question_type === "long_text" ? (
-                    <textarea
-                      value={value}
-                      onChange={(event) => handleAnswerChange(question.question_id, event.target.value)}
-                      rows={4}
-                      className="w-full rounded-3xl border border-outline-variant/15 bg-surface-container-high px-4 py-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-                      placeholder="Type your answer here"
-                      disabled={alreadySubmitted}
-                    />
-                  ) : (
-                    <input
-                      value={value}
-                      onChange={(event) => handleAnswerChange(question.question_id, event.target.value)}
-                      className="w-full rounded-3xl border border-outline-variant/15 bg-surface-container-high px-4 py-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-                      placeholder="Type your answer here"
-                      disabled={alreadySubmitted}
-                    />
-                  )}
-                </div>
-              );
-            })
+                );
+              })}
+            </div>
           )}
 
-          <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:justify-between">
+          <div className="flex flex-col gap-4 border-t border-outline-variant/15 pt-6 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
               onClick={() => router.push("/dashboard")}
-              className="rounded-3xl border border-outline-variant/15 bg-surface-container-high px-6 py-3 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-base transition"
+              className="inline-flex items-center justify-center rounded-3xl border border-outline-variant/15 bg-surface-container-high px-6 py-3 text-sm font-semibold text-on-surface transition hover:border-outline-variant/25 hover:bg-surface-container-base hover:shadow-sm"
             >
               Back to dashboard
             </button>
             <button
               type="submit"
               disabled={isSubmitting || alreadySubmitted || questions.length === 0}
-              className="rounded-3xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 hover:shadow-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-2 rounded-3xl px-6 py-3 text-sm font-semibold text-on-primary shadow-lg shadow-primary/20 primary-gradient transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
             >
+              <span className="material-symbols-outlined text-[18px]">
+                {isSubmitting ? "sync" : alreadySubmitted ? "lock" : "send"}
+              </span>
               {isSubmitting ? "Submitting..." : alreadySubmitted ? "Already Submitted" : "Submit Response"}
             </button>
           </div>

@@ -85,7 +85,9 @@ export default function CreateFormModal({ isOpen, onClose }: CreateFormModalProp
             return;
         }
 
-        // 2. Success! Redirect to the newly created form builder page
+        // 2. Success! Close the modal first, then redirect to the builder page.
+        setIsLoading(false);
+        onClose();
         router.push(`/dashboard/forms/${newFormId}/edit`);
     };
 
