@@ -207,17 +207,43 @@ export default function DashboardPage() {
                     {!isLoading && !errorMessage && forms.map((form) => (
                         <div
                             key={form.form_id}
-                            className="group bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/15 hover:border-primary/30 hover:shadow-[0_24px_48px_-12px_rgba(26,27,34,0.08)] transition-all cursor-pointer"
+                            className="group bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/15 hover:border-primary/30 hover:shadow-[0_24px_48px_-12px_rgba(26,27,34,0.08)] transition-all"
                         >
                             <h3 className="text-lg font-bold mb-1 group-hover:text-primary transition-colors">
                                 {form.title}
                             </h3>
-                            <p className="text-sm text-on-surface-variant mb-6">
+                            <p className="text-sm text-on-surface-variant mb-4">
                                 Created on {new Date(form.created_at).toLocaleDateString()}
                             </p>
-                            <div className="flex items-center justify-between text-xs font-bold text-outline uppercase tracking-widest">
+                            <div className="mb-4 rounded-lg border border-outline-variant/20 bg-surface-container-high p-3">
+                                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary/80 mb-2">Form Code</p>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-mono text-sm tracking-[0.2em] text-on-surface">{form.form_id}</span>
+                                    <button
+                                        onClick={() => navigator.clipboard.writeText(form.form_id)}
+                                        className="rounded border border-outline-variant/20 bg-surface-container-low px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-container-base transition"
+                                    >
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between text-xs font-bold text-outline uppercase tracking-widest mb-4">
                                 <span>{form.questionCount} Questions</span>
                                 <span>{form.responseCount} Responses</span>
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => router.push(`/dashboard/forms/${form.form_id}/edit`)}
+                                    className="flex-1 px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-semibold hover:bg-primary/90 transition"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => router.push(`/dashboard/forms/${form.form_id}/responses`)}
+                                    className="flex-1 px-4 py-2 bg-secondary-container text-on-secondary-container rounded-lg text-sm font-semibold hover:bg-secondary-container/90 transition"
+                                >
+                                    View Responses
+                                </button>
                             </div>
                         </div>
                     ))}

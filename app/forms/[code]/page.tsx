@@ -14,6 +14,7 @@ type QuestionRow = {
   question_id: number;
   question_text: string;
   question_type: string;
+  question_options?: string[];
   is_required: boolean;
 };
 
@@ -74,7 +75,7 @@ export default function FormAnswerPage() {
 
       const { data: questionData, error: questionsError } = await supabase
         .from("questions")
-        .select("question_id, question_text, question_type, is_required")
+        .select("question_id, question_text, question_type, question_options, is_required")
         .eq("form_id", normalizedCode)
         .order("question_id", { ascending: true });
 
@@ -93,6 +94,19 @@ export default function FormAnswerPage() {
 
       if (!responseError && responseRow) {
         setAlreadySubmitted(true);
+
+        const { data: answerRows, error: answersError } = await supabase
+          .from("answers")
+          .select("question_id, answer_text")
+          .eq("response_id", responseRow.response_id);
+
+        if (!answersError && answerRows) {
+          const loadedAnswers = (answerRows as { question_id: number; answer_text: string }[]).reduce(
+            (acc, row) => ({ ...acc, [row.question_id]: row.answer_text ?? "" }),
+            {} as Record<number, string>
+          );
+          setAnswers(loadedAnswers);
+        }
       }
 
       setForm(formData as FormRow);
@@ -228,14 +242,24 @@ export default function FormAnswerPage() {
     <main className="min-h-screen py-16 px-6 bg-surface text-on-surface">
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="rounded-3xl bg-surface-container-lowest border border-outline-variant/15 p-10 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary/80 mb-2">Form Code</p>
               <h1 className="text-4xl font-extrabold tracking-tight">{form?.title}</h1>
               {form?.description && <p className="mt-4 text-on-surface-variant">{form.description}</p>}
             </div>
-            <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-semibold text-on-surface-variant">
-              {normalizedCode}
+            <div className="rounded-3xl border border-outline-variant/20 bg-surface-container-high p-4 text-sm font-semibold text-on-surface-variant w-full sm:w-auto">
+              <p className="text-[10px] uppercase tracking-[0.28em] mb-2 text-on-surface-variant">Share this code</p>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-lg tracking-[0.28em] text-on-surface">{normalizedCode}</span>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(normalizedCode)}
+                  className="rounded-full border border-outline-variant/20 bg-surface-container-low px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-base transition"
+                >
+                  Copy
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -243,7 +267,7 @@ export default function FormAnswerPage() {
         {alreadySubmitted && (
           <div className="rounded-3xl border border-amber-300/30 bg-amber-50/80 p-6 text-amber-900">
             <p className="font-semibold">You have already submitted this form.</p>
-            <p className="text-sm text-amber-700/90">Your previous response is recorded and additional submissions are not allowed.</p>
+            <p className="text-sm text-amber-700/90">Your previous response is recorded and additional submissions are not allowed. Your answers are shown below in read-only mode.</p>
           </div>
         )}
 
@@ -274,7 +298,7 @@ export default function FormAnswerPage() {
                       <p className="text-base font-semibold">{question.question_text}</p>
                       {question.is_required && <p className="text-xs text-on-surface-variant">Required</p>}
                     </div>
-                    <span className="text-xs uppercase tracking-[0.2em] text-on-surface-variant">{question.question_type === "long_text" ? "Paragraph" : "Answer"}</span>
+                    <span className="text-xs uppercase tracking-[0.2em] text-on-surface-variant">{question.question_type === "long_text" ? "Paragraph" : question.question_type === "multiple_choice" ? "Multiple Choice" : "Short Answer"}</span>
                   </div>
                   {question.question_type === "long_text" ? (
                     <textarea
@@ -285,6 +309,27 @@ export default function FormAnswerPage() {
                       placeholder="Type your answer here"
                       disabled={alreadySubmitted}
                     />
+                  ) : question.question_type === "multiple_choice" ? (
+                    <div className="space-y-3">
+                      {question.question_options && question.question_options.length > 0 ? (
+                        question.question_options.map((option) => (
+                          <label key={`${question.question_id}-${option}`} className="flex items-center gap-3 rounded-3xl border border-outline-variant/15 bg-surface-container-high px-4 py-3 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`question-${question.question_id}`}
+                              value={option}
+                              checked={value === option}
+                              onChange={(event) => handleAnswerChange(question.question_id, event.target.value)}
+                              disabled={alreadySubmitted}
+                              className="h-4 w-4 text-primary focus:ring-primary"
+                            />
+                            <span className="text-base">{option}</span>
+                          </label>
+                        ))
+                      ) : (
+                        <p className="text-sm text-on-surface-variant">No options have been added for this question yet.</p>
+                      )}
+                    </div>
                   ) : (
                     <input
                       value={value}
