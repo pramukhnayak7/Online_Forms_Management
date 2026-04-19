@@ -14,6 +14,7 @@ type QuestionRow = {
   question_id: number;
   question_text: string;
   question_type: string;
+  question_options?: string[];
   is_required: boolean;
 };
 
@@ -92,7 +93,7 @@ export default function FormAnswerPage() {
 
       const { data: questionData, error: questionsError } = await supabase
         .from("questions")
-        .select("question_id, question_text, question_type, is_required")
+        .select("question_id, question_text, question_type, question_options, is_required")
         .eq("form_id", normalizedCode)
         .order("question_id", { ascending: true });
 
@@ -111,6 +112,19 @@ export default function FormAnswerPage() {
 
       if (!responseError && responseRow) {
         setAlreadySubmitted(true);
+
+        const { data: answerRows, error: answersError } = await supabase
+          .from("answers")
+          .select("question_id, answer_text")
+          .eq("response_id", responseRow.response_id);
+
+        if (!answersError && answerRows) {
+          const loadedAnswers = (answerRows as { question_id: number; answer_text: string }[]).reduce(
+            (acc, row) => ({ ...acc, [row.question_id]: row.answer_text ?? "" }),
+            {} as Record<number, string>
+          );
+          setAnswers(loadedAnswers);
+        }
       }
 
       setForm(formData as FormRow);
@@ -261,7 +275,7 @@ export default function FormAnswerPage() {
         {alreadySubmitted && (
           <div className="rounded-3xl border border-amber-300/30 bg-amber-50/80 p-6 text-amber-900">
             <p className="font-semibold">You have already submitted this form.</p>
-            <p className="text-sm text-amber-700/90">Your previous response is recorded and additional submissions are not allowed.</p>
+            <p className="text-sm text-amber-700/90">Your previous response is recorded and additional submissions are not allowed. Your answers are shown below in read-only mode.</p>
           </div>
         )}
 

@@ -21,6 +21,7 @@ CREATE TABLE Questions (
     form_id VARCHAR(6) NOT NULL,
     question_text TEXT NOT NULL,
     question_type VARCHAR(50) DEFAULT 'text',
+    question_options JSONB DEFAULT '[]',
     is_required BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (form_id) REFERENCES Forms(form_id) ON DELETE CASCADE
 );

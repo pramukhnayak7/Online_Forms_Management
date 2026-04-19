@@ -10,19 +10,21 @@ type Question = {
     form_id: string;
     question_text: string;
     question_type: string;
+    question_options?: string[];
     is_required: boolean;
 };
 
 type DraftQuestion = Omit<Question, "question_id"> & {
     question_id: number | string;
     isPersisted: boolean;
+    newOptionText?: string;
 };
 
 export default function FormBuilderClient({ initialForm, initialQuestions }: { initialForm: Form, initialQuestions: Question[] }) {
     const [formTitle, setFormTitle] = useState(initialForm.title);
     const [formDescription, setFormDescription] = useState(initialForm.description ?? "");
     const [questions, setQuestions] = useState<DraftQuestion[]>(
-        initialQuestions.map((q) => ({ ...q, isPersisted: true }))
+        initialQuestions.map((q) => ({ ...q, question_options: q.question_options ?? [], isPersisted: true }))
     );
     const [newQuestionText, setNewQuestionText] = useState("");
     const [isSaving, setIsSaving] = useState(false);
@@ -36,6 +38,38 @@ export default function FormBuilderClient({ initialForm, initialQuestions }: { i
         );
     };
 
+    const updateQuestionOption = (questionId: number | string, optionIndex: number, value: string) => {
+        setQuestions((prev) =>
+            prev.map((q) => {
+                if (q.question_id !== questionId) return q;
+                const options = [...(q.question_options ?? [])];
+                options[optionIndex] = value;
+                return { ...q, question_options: options };
+            })
+        );
+    };
+
+    const addOptionToQuestion = (questionId: number | string) => {
+        setQuestions((prev) =>
+            prev.map((q) => {
+                if (q.question_id !== questionId) return q;
+                const options = [...(q.question_options ?? []), q.newOptionText?.trim() || `Option ${((q.question_options ?? []).length || 0) + 1}`];
+                return { ...q, question_options: options, newOptionText: "" };
+            })
+        );
+    };
+
+    const removeOptionFromQuestion = (questionId: number | string, optionIndex: number) => {
+        setQuestions((prev) =>
+            prev.map((q) => {
+                if (q.question_id !== questionId) return q;
+                const options = [...(q.question_options ?? [])];
+                options.splice(optionIndex, 1);
+                return { ...q, question_options: options };
+            })
+        );
+    };
+
     const handleAddQuestion = () => {
         const text = newQuestionText.trim() || "Untitled Question";
 
@@ -46,8 +80,10 @@ export default function FormBuilderClient({ initialForm, initialQuestions }: { i
                 form_id: initialForm.form_id,
                 question_text: text,
                 question_type: "text",
+                question_options: [],
                 is_required: false,
                 isPersisted: false,
+                newOptionText: "",
             },
         ]);
 
@@ -103,6 +139,7 @@ export default function FormBuilderClient({ initialForm, initialQuestions }: { i
                         .update({
                             question_text: q.question_text,
                             question_type: q.question_type,
+                            question_options: q.question_options ?? [],
                             is_required: q.is_required,
                         })
                         .eq("question_id", Number(q.question_id))
@@ -124,6 +161,7 @@ export default function FormBuilderClient({ initialForm, initialQuestions }: { i
                             form_id: q.form_id,
                             question_text: q.question_text,
                             question_type: q.question_type,
+                            question_options: q.question_options ?? [],
                             is_required: q.is_required,
                         }))
                     );
@@ -178,7 +216,7 @@ export default function FormBuilderClient({ initialForm, initialQuestions }: { i
             {/* Questions List */}
             {questions.map((q) => (
                 <div key={q.question_id} className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/20 flex flex-col gap-4 group">
-                    <div className="flex justify-between items-start">
+                            <div className="flex justify-between items-start">
                         <div className="flex-1">
                             <input
                                 type="text"
@@ -198,6 +236,46 @@ export default function FormBuilderClient({ initialForm, initialQuestions }: { i
                             <option value="multiple_choice">Multiple Choice</option>
                         </select>
                     </div>
+                    {q.question_type === "multiple_choice" && (
+                        <div className="space-y-3">
+                            <div className="text-sm font-medium text-on-surface-variant">Options</div>
+                            {(q.question_options ?? []).map((option, optionIndex) => (
+                                <div key={`${q.question_id}-${optionIndex}`} className="flex items-center gap-3">
+                                    <input
+                                        type="text"
+                                        value={option}
+                                        onChange={(e) => updateQuestionOption(q.question_id, optionIndex, e.target.value)}
+                                        className="flex-1 rounded-full border border-outline-variant/20 bg-surface-container-high px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/10"
+                                        placeholder={`Option ${optionIndex + 1}`}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => removeOptionFromQuestion(q.question_id, optionIndex)}
+                                        className="rounded-full p-2 text-error hover:bg-error-container/20 transition"
+                                        aria-label="Remove option"
+                                    >
+                                        <span className="material-symbols-outlined">close</span>
+                                    </button>
+                                </div>
+                            ))}
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="text"
+                                    value={q.newOptionText ?? ""}
+                                    onChange={(e) => updateQuestionInState(q.question_id, { newOptionText: e.target.value })}
+                                    className="flex-1 rounded-full border border-outline-variant/20 bg-surface-container-high px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/10"
+                                    placeholder="Add new option"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => addOptionToQuestion(q.question_id)}
+                                    className="rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 transition"
+                                >
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Footer Actions for this question */}
                     <div className="flex justify-end items-center pt-4 border-t border-outline-variant/10 gap-4 opacity-50 group-hover:opacity-100 transition-opacity">
