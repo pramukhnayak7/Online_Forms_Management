@@ -13,6 +13,7 @@ CREATE TABLE Forms (
     title VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     description TEXT,
+    design_code JSONB DEFAULT '{}'::jsonb,
     FOREIGN KEY (creator_id) REFERENCES Users(user_id) ON DELETE CASCADE
 );
 -- 3. Questions

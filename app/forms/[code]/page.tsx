@@ -8,6 +8,7 @@ type FormRow = {
   form_id: string;
   title: string;
   description: string | null;
+  design_code?: any;
 };
 
 type QuestionRow = {
@@ -62,7 +63,7 @@ export default function FormAnswerPage() {
 
       const { data: formData, error: formError } = await supabase
         .from("forms")
-        .select("form_id, title, description")
+        .select("form_id, title, description, design_code")
         .eq("form_id", normalizedCode)
         .single();
 
@@ -267,8 +268,9 @@ export default function FormAnswerPage() {
           ) : (
             questions.map((question) => {
               const value = answers[question.question_id] ?? "";
+              const customBg = form?.design_code ? form.design_code[question.question_id] : undefined;
               return (
-                <div key={question.question_id} className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-6">
+                <div key={question.question_id} style={customBg ? { backgroundColor: customBg } : {}} className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-6 transition-colors">
                   <div className="flex items-center justify-between gap-4 mb-4">
                     <div>
                       <p className="text-base font-semibold">{question.question_text}</p>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/utils/supabase";
 
 // Defining the shapes of our database rows
-type Form = { form_id: string; title: string; description: string | null };
+type Form = { form_id: string; title: string; description: string | null; design_code?: any };
 type Question = {
     question_id: number;
     form_id: string;
@@ -21,6 +21,7 @@ type DraftQuestion = Omit<Question, "question_id"> & {
 export default function FormBuilderClient({ initialForm, initialQuestions }: { initialForm: Form, initialQuestions: Question[] }) {
     const [formTitle, setFormTitle] = useState(initialForm.title);
     const [formDescription, setFormDescription] = useState(initialForm.description ?? "");
+    const [designCode, setDesignCode] = useState<Record<string, string | null>>(initialForm.design_code || {});
     const [questions, setQuestions] = useState<DraftQuestion[]>(
         initialQuestions.map((q) => ({ ...q, isPersisted: true }))
     );
@@ -82,20 +83,6 @@ export default function FormBuilderClient({ initialForm, initialQuestions }: { i
         const newOnes = normalized.filter((q) => !q.isPersisted);
 
         try {
-            const { error: formUpdateError } = await supabase
-                .from("forms")
-                .update({
-                    title: formTitle.trim() || initialForm.title,
-                    description: formDescription.trim() || null,
-                })
-                .eq("form_id", initialForm.form_id);
-
-            if (formUpdateError) {
-                setSaveMessage(`Save failed: ${formUpdateError.message}`);
-                setIsSaving(false);
-                return;
-            }
-
             const updateResults = await Promise.all(
                 existing.map((q) =>
                     supabase
@@ -116,8 +103,10 @@ export default function FormBuilderClient({ initialForm, initialQuestions }: { i
                 return;
             }
 
+            let finalDesignCode = { ...designCode };
+
             if (newOnes.length > 0) {
-                const { error: insertError } = await supabase
+                const { data: insertedQuestions, error: insertError } = await supabase
                     .from("questions")
                     .insert(
                         newOnes.map((q) => ({
@@ -126,14 +115,42 @@ export default function FormBuilderClient({ initialForm, initialQuestions }: { i
                             question_type: q.question_type,
                             is_required: q.is_required,
                         }))
-                    );
+                    )
+                    .select();
 
                 if (insertError) {
                     setSaveMessage(`Save failed: ${insertError.message}`);
                     setIsSaving(false);
                     return;
                 }
+
+                if (insertedQuestions) {
+                    newOnes.forEach((tempQ, index) => {
+                        const realId = insertedQuestions[index].question_id;
+                        if (finalDesignCode[tempQ.question_id]) {
+                            finalDesignCode[realId] = finalDesignCode[tempQ.question_id];
+                            delete finalDesignCode[tempQ.question_id];
+                        }
+                    });
+                }
             }
+
+            const { error: formUpdateError } = await supabase
+                .from("forms")
+                .update({
+                    title: formTitle.trim() || initialForm.title,
+                    description: formDescription.trim() || null,
+                    design_code: finalDesignCode
+                })
+                .eq("form_id", initialForm.form_id);
+
+            if (formUpdateError) {
+                setSaveMessage(`Save failed: ${formUpdateError.message}`);
+                setIsSaving(false);
+                return;
+            }
+            
+            setDesignCode(finalDesignCode);
 
             const { data: refreshed, error: refreshError } = await supabase
                 .from("questions")
@@ -177,7 +194,7 @@ export default function FormBuilderClient({ initialForm, initialQuestions }: { i
 
             {/* Questions List */}
             {questions.map((q) => (
-                <div key={q.question_id} className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/20 flex flex-col gap-4 group">
+                <div key={q.question_id} style={designCode[q.question_id] ? { backgroundColor: designCode[q.question_id] as string } : {}} className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/20 flex flex-col gap-4 group transition-colors">
                     <div className="flex justify-between items-start">
                         <div className="flex-1">
                             <input
@@ -200,8 +217,41 @@ export default function FormBuilderClient({ initialForm, initialQuestions }: { i
                     </div>
 
                     {/* Footer Actions for this question */}
-                    <div className="flex justify-end items-center pt-4 border-t border-outline-variant/10 gap-4 opacity-50 group-hover:opacity-100 transition-opacity">
-                        <label className="flex items-center gap-2 text-sm text-on-surface-variant font-medium cursor-pointer">
+                    <div className="flex justify-between items-center pt-4 border-t border-outline-variant/10 gap-4 opacity-50 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setDesignCode(prev => ({ ...prev, [q.question_id]: '' }))}
+                                className={`w-6 h-6 rounded-full border-2 ${!designCode[q.question_id] ? 'border-primary' : 'border-transparent'} bg-surface-container-high hover:scale-110 transition`}
+                                title="Default"
+                                type="button"
+                            />
+                            <button
+                                onClick={() => setDesignCode(prev => ({ ...prev, [q.question_id]: '#e0f2fe' }))}
+                                className={`w-6 h-6 rounded-full border-2 ${designCode[q.question_id] === '#e0f2fe' ? 'border-primary' : 'border-transparent'} bg-[#e0f2fe] hover:scale-110 transition`}
+                                title="Light Blue"
+                                type="button"
+                            />
+                            <button
+                                onClick={() => setDesignCode(prev => ({ ...prev, [q.question_id]: '#dcfce7' }))}
+                                className={`w-6 h-6 rounded-full border-2 ${designCode[q.question_id] === '#dcfce7' ? 'border-primary' : 'border-transparent'} bg-[#dcfce7] hover:scale-110 transition`}
+                                title="Light Green"
+                                type="button"
+                            />
+                            <button
+                                onClick={() => setDesignCode(prev => ({ ...prev, [q.question_id]: '#fef9c3' }))}
+                                className={`w-6 h-6 rounded-full border-2 ${designCode[q.question_id] === '#fef9c3' ? 'border-primary' : 'border-transparent'} bg-[#fef9c3] hover:scale-110 transition`}
+                                title="Light Yellow"
+                                type="button"
+                            />
+                            <button
+                                onClick={() => setDesignCode(prev => ({ ...prev, [q.question_id]: '#f3f4f6' }))}
+                                className={`w-6 h-6 rounded-full border-2 ${designCode[q.question_id] === '#f3f4f6' ? 'border-primary' : 'border-transparent'} bg-[#f3f4f6] hover:scale-110 transition`}
+                                title="Light Gray"
+                                type="button"
+                            />
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 text-sm text-on-surface-variant font-medium cursor-pointer">
                             <input
                                 type="checkbox"
                                 checked={q.is_required}
@@ -218,6 +268,7 @@ export default function FormBuilderClient({ initialForm, initialQuestions }: { i
                         >
                             <span className="material-symbols-outlined text-[20px]">delete</span>
                         </button>
+                        </div>
                     </div>
                 </div>
             ))}
