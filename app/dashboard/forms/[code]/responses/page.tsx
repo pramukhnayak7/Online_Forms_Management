@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import ExportCSVButton from "@/app/components/ExportCSVButton";
 
 type FormRow = {
     form_id: string;
@@ -147,6 +148,14 @@ export default async function FormResponsesPage({ params }: PageProps) {
                                     <div className="mt-3 text-4xl font-black tracking-tight text-on-surface">{responseRows.length}</div>
                                     <p className="mt-2 text-sm text-on-surface-variant">All responses for this form are listed below, newest first.</p>
                                 </div>
+
+                                <ExportCSVButton
+                                    questions={questionRows}
+                                    responses={responseRows}
+                                    answers={answerRows}
+                                    users={userRows}
+                                    formTitle={form.title}
+                                />
 
                                 <Link
                                     href="/dashboard"
